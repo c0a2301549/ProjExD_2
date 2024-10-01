@@ -16,6 +16,28 @@ DELTA = {
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
+def bomb():
+    """
+    爆弾の拡大画像リストと加速度リストを作成する関数
+    戻り値：
+    bb_img : サイズに応じた爆弾Surface
+    bb_accs : 加速度のリスト
+    """
+    bb_imgs = []  # 爆弾画像のリスト
+    bb_accs = [a for a in range(1, 11)]  # 加速度のリスト
+
+    for r in range(1, 11):  # 爆弾のサイズを1段階ごとに大きくする
+        bb_img = pg.Surface((20 * r, 20 * r), pg.SRCALPHA)  # サイズに応じた爆弾Surface
+        pg.draw.circle(bb_img, (255, 0, 0), (10 * r, 10 * r), 10 * r)  # 赤い爆弾を描く
+        bb_imgs.append(bb_img)  # リストに追加
+
+    return bb_imgs, bb_accs
+
+
+
+
+
+
 def game_over(screen, fonto, txt, go_kk_rct, go_kk): 
     """
     Game Overの画面を表示する関数
@@ -62,17 +84,15 @@ def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
-    bg_img = pg.image.load("fig/pg_bg.jpg")    
+    bg_img = pg.image.load("fig/pg_bg.jpg")
     kk_img = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
     kk_rct = kk_img.get_rect()
     kk_rct.center = 300, 200
 
-    bb_img = pg.Surface((20, 20))  
-    pg.draw.circle(bb_img, (255, 0, 0), (10, 10), 10) #爆弾
-    bb_img.set_colorkey((0, 0, 0))
-    bb_rct = bb_img.get_rect()
+    bb_imgs, bb_accs = bomb()  # bomb関数から爆弾画像と加速度を取得
+    bb_rct = bb_imgs[0].get_rect()  # 最初の爆弾サイズのRectを設定
     bb_rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
-    vx, vy = +5, +5 #爆弾の速度
+    vx, vy = +5, +5  # 初期の爆弾速度
 
     clock = pg.time.Clock()
     tmr = 0
@@ -81,49 +101,53 @@ def main():
     txt = fonto.render("Game Over", True, (255, 255, 255))  # "Game Over"の文字画像
     go_kk = pg.image.load("fig/8.png")  # 泣いているこうかとんの画像
     go_kk_rct = go_kk.get_rect()  # こうかとんのRectオブジェクト
-    
 
     while True:
         for event in pg.event.get():
-            if event.type == pg.QUIT: 
+            if event.type == pg.QUIT:
                 return
-        screen.blit(bg_img, [0, 0]) 
-        if kk_rct.colliderect(bb_rct):#こうかとんと爆弾が重なった時
+
+        screen.blit(bg_img, [0, 0])
+
+        if kk_rct.colliderect(bb_rct):  # こうかとんと爆弾が重なった時
             game_over(screen, fonto, txt, go_kk_rct, go_kk)
             return
-            #return #ゲームオーバー
 
         key_lst = pg.key.get_pressed()
-        sum_mv = [0, 0] #横、縦
-        """
-        if key_lst[pg.K_UP]:
-            sum_mv[1] -= 5
-        if key_lst[pg.K_DOWN]:
-            sum_mv[1] += 5
-        if key_lst[pg.K_LEFT]:
-            sum_mv[0] -= 5
-        if key_lst[pg.K_RIGHT]:
-            sum_mv[0] += 5
-        """
+        sum_mv = [0, 0]  # 横、縦移動量
         for key, tpl in DELTA.items():
             if key_lst[key]:
-                sum_mv[0] += tpl[0] #横
-                sum_mv[1] += tpl[1] #縦
-        kk_rct.move_ip(sum_mv)
-        if check_bound(kk_rct) != (True, True):#画面外に出ない
-            kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
-        screen.blit(kk_img, kk_rct)
-        bb_rct.move_ip(vx, vy)
+                sum_mv[0] += tpl[0]  # 横
+                sum_mv[1] += tpl[1]  # 縦
 
-        yoko, tate = check_bound(bb_rct) #爆弾が反射
+        kk_rct.move_ip(sum_mv)
+        if check_bound(kk_rct) != (True, True):  # 画面外に出ない
+            kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
+
+        # tmrに基づいて適切な爆弾画像と加速度を選択
+        idx = min(tmr // 500, 9)  # インデックスの上限は9（10段階）
+        bb_img = bb_imgs[idx]  # 爆弾の拡大版を取得
+        bb_rct = bb_img.get_rect(center=bb_rct.center)  # 拡大後のRectを取得
+
+        avx = vx * bb_accs[idx]  # 加速値に基づいて速度を調整
+        avy = vy * bb_accs[idx]
+
+        bb_rct.move_ip(avx, avy)  # 爆弾の移動
+
+        yoko, tate = check_bound(bb_rct)  # 爆弾が画面端にぶつかったら反射
         if not yoko:
             vx *= -1
         if not tate:
             vy *= -1
-        screen.blit(bb_img, bb_rct)
+
+        screen.blit(bb_img, bb_rct)  # 爆弾を描画
+        screen.blit(kk_img, kk_rct)  # こうかとんを描画
         pg.display.update()
-        tmr += 1
+        tmr += 1  # タイマーの更新
         clock.tick(50)
+
+
+
 
 
 if __name__ == "__main__":
