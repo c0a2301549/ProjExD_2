@@ -52,7 +52,7 @@ def bomb():
         pg.draw.circle(bb_img, (255, 0, 0), (10 * r, 10 * r), 10 * r)  # 赤い爆弾を描く
         bb_imgs.append(bb_img)  # リストに追加
 
-    return bb_imgs, bb_accs
+    return bb_imgs, bb_accs #bb_imgs:サイズに応じた爆弾Surfaceのリスト bb_accs:加速度のリスト
 
 
 
