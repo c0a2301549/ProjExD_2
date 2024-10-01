@@ -16,6 +16,27 @@ DELTA = {
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
+def houkou():
+    """
+    各移動方向に応じたこうかとんの画像を辞書で返す関数
+    戻り値：
+    kk_img:方向と対応するこうかとんの画像を辞書として返す
+    """
+    kk_img = pg.image.load("fig/3.png")
+    kk_imgs = {
+        (5, 0): pg.transform.rotozoom(kk_img, 180, 1.0),   # 右
+        (5, -5): pg.transform.rotozoom(kk_img, 0, 1.0),  # 右上
+        (-5, 0): pg.transform.rotozoom(kk_img, 0, 1.0), # 左
+        (-5, -5): pg.transform.rotozoom(kk_img, -45, 1.0), # 左上
+        (0, 5): pg.transform.rotozoom(kk_img, 90, 1.0),  # 下
+        (0, -5): pg.transform.rotozoom(kk_img, -90, 1.0),  # 上
+        (5, 5): pg.transform.rotozoom(kk_img, 0, 1.0),  # 右下
+        (-5, 5): pg.transform.rotozoom(kk_img, 45, 1.0), # 左下
+    }
+    return kk_imgs
+
+
+
 def bomb():
     """
     爆弾の拡大画像リストと加速度リストを作成する関数
@@ -65,7 +86,6 @@ def game_over(screen, fonto, txt, go_kk_rct, go_kk):
     return
     
 
-
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
     """
     引数：こうかとん　または　獏ファンのRect
@@ -80,12 +100,14 @@ def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
     return yoko, tate
 
 
-
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load("fig/pg_bg.jpg")
-    kk_img = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
+
+    # 各方向に応じたこうかとんの画像を取得
+    kk_imgs = houkou()
+    kk_img = kk_imgs[(5, 0)]  # 最初の向きは右
     kk_rct = kk_img.get_rect()
     kk_rct.center = 300, 200
 
@@ -120,6 +142,11 @@ def main():
                 sum_mv[0] += tpl[0]  # 横
                 sum_mv[1] += tpl[1]  # 縦
 
+        # 移動量がある場合、対応する方向のこうかとん画像に変更
+        if sum_mv != [0, 0]:
+            movement = (sum_mv[0], sum_mv[1])
+            kk_img = kk_imgs.get(movement, kk_img)  # 辞書から画像を取得（デフォルトは現在の画像）
+
         kk_rct.move_ip(sum_mv)
         if check_bound(kk_rct) != (True, True):  # 画面外に出ない
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
@@ -145,8 +172,6 @@ def main():
         pg.display.update()
         tmr += 1  # タイマーの更新
         clock.tick(50)
-
-
 
 
 
